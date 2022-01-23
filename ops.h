@@ -127,4 +127,48 @@ void DEY(CPU* cpu);
 left. Bit 0 is set to 0 and bit 7 is placed in the carry flag. The effect of this operation
 is to multiply the memory contents by 2 (ignoring 2's complement considerations), setting the
 carry if the result will not fit in 8 bits. */
-void ASL(CPU* cpu, uint16_t operand);
+void ASL(CPU* cpu, uint16_t operand, Mode addr_mode);
+void LSR(CPU* cpu, uint16_t operand, Mode addr_mode);
+void ROL(CPU* cpu, uint16_t operand, Mode addr_mode);
+void ROR(CPU* cpu, uint16_t operand, Mode addr_mode);
+
+
+/* ------------------------------------ System Functions ------------------------------------ */
+/* BRK - Force Interrupt; The BRK instruction forces the generation of an interrupt request.
+The program counter and processor status are pushed on the stack then the IRQ interrupt vector
+at $FFFE/F is loaded into the PC and the break flag in the status set to one. */
+void BRK(CPU* cpu);
+void NOP();
+void RTI(CPU* cpu);
+
+/* ------------------------------------ Jumps and Calls ------------------------------------ */
+void JMP(CPU* cpu, uint16_t operand);
+void JSR(CPU* cpu, uint16_t operand);
+void RTS(CPU* cpu);
+
+
+/* ------------------------------------ Branches ------------------------------------ */
+void BCC(CPU* cpu, uint16_t branch_addr);
+void BCS(CPU* cpu, uint16_t branch_addr);
+void BEQ(CPU* cpu, uint16_t branch_addr);
+void BMI(CPU* cpu, uint16_t branch_addr);
+void BNE(CPU* cpu, uint16_t branch_addr);
+void BPL(CPU* cpu, uint16_t branch_addr);
+void BVC(CPU* cpu, uint16_t branch_addr);
+void BVS(CPU* cpu, uint16_t branch_addr);
+
+/* ------------------------------------ Status Flag Changes ------------------------------------ */
+void CLC(CPU* cpu);
+void CLD(CPU* cpu);
+void CLI(CPU* cpu);
+void CLV(CPU* cpu);
+void SEC(CPU* cpu);
+void SED(CPU* cpu);
+void SEI(CPU* cpu);
+
+
+
+
+
+
+

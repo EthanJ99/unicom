@@ -2,6 +2,30 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
+
+typedef enum {
+    MODE_ABS,
+    MODE_ABX,
+    MODE_ABY,
+    MODE_ACC,
+    MODE_IMM,
+    MODE_IMP,
+    MODE_INX,
+    MODE_IND,
+    MODE_INY,
+    MODE_REL,
+    MODE_ZPG,
+    MODE_ZPX,
+    MODE_ZPY
+} Mode;
+
+typedef struct Op{
+    uint8_t code;
+    char* label;
+    uint8_t cycles;
+    Mode mode;
+} Op;
 
 typedef struct CPU{
     uint8_t memory[0xffff];
@@ -32,6 +56,9 @@ uint16_t byte_swap(uint16_t val);
 // Read a byte from CPUs memory from the given address
 uint8_t read8(CPU* cpu, uint16_t addr);
 uint16_t read16(CPU* cpu, uint16_t addr);
+
+Op* get_op_data(uint8_t opcode);
+void print_dissassembly(CPU* cpu, bool dump);
 
 /* ------------------------------------ Flag handling ------------------------------------ */
 
@@ -79,6 +106,9 @@ uint16_t addr_abx(CPU* cpu);
 // Absolute (Y indexed)
 uint16_t addr_aby(CPU* cpu);
 
+// Accumulator
+uint16_t addr_acc(CPU* cpu);
+
 // Immediate
 uint16_t addr_imm(CPU* cpu);
 
@@ -90,6 +120,9 @@ uint16_t addr_inx(CPU* cpu);
 
 // Indirect (Y indexed)
 uint16_t addr_iny(CPU* cpu);
+
+// Relative
+uint16_t addr_rel(CPU* cpu);
 
 // Zero Page
 uint8_t addr_zpg(CPU* cpu);
