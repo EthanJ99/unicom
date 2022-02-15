@@ -1,0 +1,9 @@
+10.Feb.2022:
+- Fixed flag bugs in CMP/CPX/CPY
+- Adjusted the handle_flag_n and handle_flag_z functions for similar reasons
+
+11.Feb.2022:
+- Fixed PHP pushing stack pointer instead of status register
+
+15.Feb.2022:
+- Isolated incorrect status register bug to ADC function.
