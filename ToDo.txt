@@ -1,4 +1,4 @@
-- Accumulator addressing
+- Memory mirroring
 - Accout for extra cycles (e.g. crossing page boundary)
 - Rework the ASL/LSR/ROL/ROR instructions to handle acc mode less dumbly
 - https://wiki.nesdev.org/w/index.php/Status_flags#The_B_flag in PHP, PLT, RTI

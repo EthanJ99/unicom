@@ -4,10 +4,13 @@
 
 /* ---------------------------- Load ---------------------------- */
 void LDA(CPU* cpu, uint16_t operand){
+    //printf("\n\nLDA P before: %.2x\n", cpu->p);
     cpu->a = read8(cpu, operand);
 
     handle_flag_z(cpu, cpu->a);
     handle_flag_n(cpu, cpu->a);
+
+    //printf("LDA P after: %.2x\n\n", cpu->p);
 }
 
 void LDX(CPU* cpu, uint16_t operand){
@@ -26,7 +29,9 @@ void LDY(CPU* cpu, uint16_t operand){
 
 /* ---------------------------- Store ---------------------------- */
 void STA(CPU* cpu, uint16_t operand){
+    //printf("\n\nSTA P before: %.2x\n", cpu->p);
     cpu->memory[operand] = cpu->a;
+    //printf("STA P after: %.2x\n\n", cpu->p);
 }
 
 void STX(CPU* cpu, uint16_t operand){
@@ -88,15 +93,17 @@ void PHA(CPU* cpu){
 }
 
 void PHP(CPU* cpu){
-    stack_push(cpu, cpu->s);
+    stack_push(cpu, cpu->p);
 }
 
 void PLA(CPU* cpu){
+    //printf("\n\n PLA P before: %.2x\n", cpu->p);
     cpu->a = stack_pull(cpu);
 
     // handle Z/N flags
     handle_flag_z(cpu, cpu->a);
     handle_flag_n(cpu, cpu->a);
+    //printf(" PLA P after: %.2x\n", cpu->p);
 }
 
 void PLP(CPU* cpu){
@@ -105,11 +112,13 @@ void PLP(CPU* cpu){
 
 /* ---------------------------- Logical ---------------------------- */
 void AND(CPU* cpu, uint16_t operand){
+    //printf("\n\n AND P before: %.2x\n", cpu->p);
     cpu->a &= read8(cpu, operand);
 
     // handle Z/N flags
     handle_flag_z(cpu, cpu->a);
     handle_flag_n(cpu, cpu->a);
+    //printf(" AND P after: %.2x\n", cpu->p);
 }
 
 void EOR(CPU* cpu, uint16_t operand){
@@ -129,22 +138,22 @@ void ORA(CPU* cpu, uint16_t operand){
 }
 
 void BIT(CPU* cpu, uint16_t operand){
-    uint8_t val = cpu->a & read8(cpu, operand);
+    uint8_t pulled = read8(cpu, operand);
 
-    handle_flag_z(cpu, val);
+    handle_flag_z(cpu, cpu->a & pulled);
 
-    // Set N to bit 7 (left-most bit) of val
-    if(0x80 & val){
+    // Set N to bit 7 (left-most bit) of pulled value
+    if(0x80 & pulled){
         set_flag(cpu, FLAG_N);
     } else{
         clear_flag(cpu, FLAG_N);
     }
 
-    // Set V to bit 6 of val
-    if(0x40 & val){
-        set_flag(cpu, FLAG_O);
+    // Set V to bit 6 of pulled value
+    if(0x40 & pulled){
+        set_flag(cpu, FLAG_V);
     } else{
-        clear_flag(cpu, FLAG_O);
+        clear_flag(cpu, FLAG_V);
     }
 }
 
@@ -168,9 +177,9 @@ void ADC(CPU* cpu, uint16_t operand){
     cpu->a = (uint8_t) (signed_result & 0x00FF); // store final result in acc as an 8-bit value again
 
     if(overflow){
-        set_flag(cpu, FLAG_O);
+        set_flag(cpu, FLAG_V);
     } else{
-        clear_flag(cpu, FLAG_O);
+        clear_flag(cpu, FLAG_V);
     }
 
     if(carry){
@@ -186,7 +195,7 @@ void ADC(CPU* cpu, uint16_t operand){
 }
 
 void SBC(CPU* cpu, uint16_t operand){
-    /* Add with carry
+    /* Subtract with carry
      If the value has overflowed the overflow flag must be set.
      An easy way to check for overflow is to see if the sign has changed
      when it shouldn't have. */
@@ -207,9 +216,9 @@ void SBC(CPU* cpu, uint16_t operand){
     cpu->a = (uint8_t) (signed_result & 0x00FF); // store final result in acc as an 8-bit value again
 
     if(overflow){
-        set_flag(cpu, FLAG_O);
+        set_flag(cpu, FLAG_V);
     } else{
-        clear_flag(cpu, FLAG_O);
+        clear_flag(cpu, FLAG_V);
     }
 
     if(carry){
@@ -223,49 +232,60 @@ void SBC(CPU* cpu, uint16_t operand){
 }
 
 void CMP(CPU* cpu, uint16_t operand){
-    uint8_t val = cpu->a - read8(cpu, operand);
+    //printf("\n\n CMP P before: %.2x\n", cpu->p);
+    uint8_t pulled = read8(cpu, operand);
+    uint8_t val = cpu->a - pulled;
 
-    // Set carry flag if Accumulator minus the value in location operand >= 0
-    if( val >= 0 ){
+    // Set carry flag if Accumulator greater than read value
+    if( cpu->a >= pulled ){
         set_flag(cpu, FLAG_C);
+    } else{
+        clear_flag(cpu, FLAG_C);
     }
     
-    // Set zero flag if Accumulator = the value in location operand
+    // Set zero flag if Accumulator == the value in location operand
     handle_flag_z(cpu, val);
 
-    // Set N flag if bit 7 of val is set
+    // Set N flag if bit 7 of val is set (i.e. val is signed)
     handle_flag_n(cpu, val);
+    //printf(" CMP P after: %.2x\n", cpu->p);
 
 }
 
 void CPX(CPU* cpu, uint16_t operand){
-    uint8_t val = cpu->x - read8(cpu, operand);
+    uint8_t pulled = read8(cpu, operand);
+    uint8_t val = cpu->x - pulled;
 
-    // Set carry flag if X minus the value in location operand >= 0
-    if( val >= 0 ){
+    // Set carry flag if X greater than read value
+    if( cpu->x >= pulled ){
         set_flag(cpu, FLAG_C);
+    } else{
+        clear_flag(cpu, FLAG_C);
     }
     
     // Set zero flag if X = the value in location operand
     handle_flag_z(cpu, val);
 
-    // Set N flag if bit 7 of val is set
+    // Set N flag if bit 7 of val is set (i.e. val is signed)
     handle_flag_n(cpu, val);
 
 }
 
 void CPY(CPU* cpu, uint16_t operand){
-    uint8_t val = cpu->y - read8(cpu, operand);
+    uint8_t pulled = read8(cpu, operand);
+    uint8_t val = cpu->y - pulled;
 
-    // Set carry flag if Y minus the value in location operand >= 0
-    if( val >= 0 ){
+    // Set carry flag if Y greater than read value
+    if( cpu->y >= pulled ){
         set_flag(cpu, FLAG_C);
+    } else{
+        clear_flag(cpu, FLAG_C);
     }
     
     // Set zero flag if Y = the value in location operand
     handle_flag_z(cpu, val);
 
-    // Set N flag if bit 7 of val is set
+    // Set N flag if bit 7 of val is set (i.e. val is signed)
     handle_flag_n(cpu, val);
 
 }
@@ -467,8 +487,11 @@ void JSR(CPU* cpu, uint16_t operand){
     cpu->pc--;
 
     // Push current PC to stack, high byte first
-    stack_push(cpu, (cpu->pc >> 8) && 0x00FF); // push high
-    stack_push(cpu, (cpu->pc) && 0x00FF); // push low
+    uint8_t high = (cpu->pc >> 8) & 0x00FF;
+    stack_push(cpu, high); // push high
+
+    uint8_t low = (cpu->pc) & 0x00FF;
+    stack_push(cpu, low); // push low
     
     // Set current PC to instruction operand
     cpu->pc = operand;
@@ -476,8 +499,13 @@ void JSR(CPU* cpu, uint16_t operand){
 
 // Return from subroutine - pull PC from stack and increment it, then continue execution
 void RTS(CPU* cpu){
-    uint8_t pc = stack_pull(cpu);
-    cpu->pc = pc + 1;
+    // Pull low and high bytes separately
+    uint8_t low = stack_pull(cpu);
+    uint8_t high = stack_pull(cpu);
+
+    uint16_t addr = (high << 8) | (low & 0xff);
+
+    cpu->pc = addr + 1;
 }
 
 /* ------------------------------------ Branches ------------------------------------ */
@@ -525,14 +553,14 @@ void BPL(CPU* cpu, uint16_t branch_addr){
 
 void BVC(CPU* cpu, uint16_t branch_addr){
     // branch if overflow flag clear
-    if(!check_flag(cpu, FLAG_O)){
+    if(!check_flag(cpu, FLAG_V)){
         cpu->pc = branch_addr;
     }
 }
 
 void BVS(CPU* cpu, uint16_t branch_addr){
     // branch if overflow flag set
-    if(check_flag(cpu, FLAG_O)){
+    if(check_flag(cpu, FLAG_V)){
         cpu->pc = branch_addr;
     }
 }
@@ -542,7 +570,7 @@ void BVS(CPU* cpu, uint16_t branch_addr){
 void CLC(CPU* cpu){ clear_flag(cpu, FLAG_C); }
 void CLD(CPU* cpu){ clear_flag(cpu, FLAG_D); }
 void CLI(CPU* cpu){ clear_flag(cpu, FLAG_I); }
-void CLV(CPU* cpu){ clear_flag(cpu, FLAG_O); }
+void CLV(CPU* cpu){ clear_flag(cpu, FLAG_V); }
 void SEC(CPU* cpu){ set_flag(cpu, FLAG_C); }
 void SED(CPU* cpu){ set_flag(cpu, FLAG_D); }
 void SEI(CPU* cpu){ set_flag(cpu, FLAG_I); }

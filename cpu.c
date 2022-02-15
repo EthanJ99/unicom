@@ -11,8 +11,8 @@ CPU* cpu_init(void){
     cpu->x = 0;
     cpu->y = 0;
     cpu->pc = 0;
-    cpu->s = 0;
-    cpu->p = 0;
+    cpu->s = 0xFD;
+    cpu->p = 0x24;
 
     return cpu;
 }
@@ -55,14 +55,22 @@ bool check_flag(CPU* cpu, uint8_t flag){
 void handle_flag_z(CPU* cpu, uint8_t val){
     if(val == 0){
         set_flag(cpu, FLAG_Z);
+    } else{
+        clear_flag(cpu, FLAG_Z);
     }
 }
 
-// Checks if a value is negative (bit 7 set) and sets the N flag is so.
+// Checks if a value is negative (bit 7 set) and sets the N flag if so.
 void handle_flag_n(CPU* cpu, uint8_t val){
-    if( ((val >> 7) & 1) == 1 ){
+    //printf("\nhandle_flag_n val=%.2x out=%.2X\t", val, val & 0x80);
+    if( val & 0x80 ){ // 0x80 == b10000000
+        //printf("SET flag N");
         set_flag(cpu, FLAG_N);
+    } else{
+        //printf("CLEAR flag N");
+        clear_flag(cpu, FLAG_N);
     }
+    //printf("\n");
 }
 
 /* ----------------------------------- Stack handling ----------------------------------- */
@@ -72,8 +80,11 @@ void stack_push(CPU* cpu, uint8_t val){
 }
 
 uint8_t stack_pull(CPU* cpu){
-    uint8_t val = cpu->memory[0x0100 + cpu->s];
     cpu->s++;
+    uint8_t val = cpu->memory[0x0100 + cpu->s];
+    /*printf("\nPulling from stack: %.2X. Prev stack val: %.2X Next stack val: %.2X\n",
+        cpu->memory[0x0100 + cpu->s], cpu->memory[0x0100 + cpu->s - 1], cpu->memory[0x0100 + cpu->s + 1]);*/
+    
     return val;
 }
 
@@ -237,6 +248,7 @@ Op* get_op_data(uint8_t opcode){
         {0x86, "STX", 3, MODE_ZPG},
         {0x88, "DEY", 2, MODE_IMP},
         {0x8a, "TXA", 2, MODE_IMP},
+        {0x8c, "STY", 4, MODE_ABS},
         {0x8d, "STA", 4, MODE_ABS},
         {0x8e, "STX", 4, MODE_ABS},
         
@@ -333,7 +345,7 @@ Op* get_op_data(uint8_t opcode){
         }
     }
 
-    // printf("$%x unimplemented.\n", opcode);
+    // printf("$%X unimplemented.\n", opcode);
     return NULL;
 }
 
@@ -356,7 +368,7 @@ void print_dissassembly(CPU* cpu, bool dump){
 
         if (opdata != NULL){
             // Print opcode memory location and name
-            printf("%x\t%s ", cpu->pc - 1, opdata->label);
+            printf("%X\t%s ", cpu->pc - 1, opdata->label);
 
             // print operand
             switch (opdata->mode){
@@ -374,14 +386,14 @@ void print_dissassembly(CPU* cpu, bool dump){
                 case MODE_ZPX: printf("$%.2X,X",   read8(cpu, cpu->pc)); cpu->pc += 1; break;
                 case MODE_ZPY: printf("$%.2X,Y",   read8(cpu, cpu->pc)); cpu->pc += 1; break;
                 default: // this should literally never be reached
-                    printf("Error: opcode $%x reading invalid addressing mode.", opdata->code);
+                    printf("Error: opcode $%X reading invalid addressing mode.", opdata->code);
                     break;
             }
 
             
         } else{
             // Print memory location and undefined opcode 
-            printf("%x\t%s ", cpu->pc - 1, "???");
+            printf("%X\t%s ", cpu->pc - 1, "???");
             //break;
         }
 
@@ -392,6 +404,67 @@ void print_dissassembly(CPU* cpu, bool dump){
 
         printf("\n");
     }
+
+
+}
+
+void disassemble_op(CPU* cpu, Op* op){
+    uint8_t opcode = op->code;
+
+    if(op != NULL){
+        // Print opcode memory location
+        printf("%X\t", cpu->pc);
+
+        // Print raw opcode and instruction values as hex
+        printf("%.2X ", opcode);
+        switch (op->mode){
+            case MODE_ABS: printf("%.2X %.2X",     read8(cpu, cpu->pc + 1), read8(cpu, cpu->pc + 2)); break;
+            case MODE_ABX: printf("%.2X %.2X",   read8(cpu, cpu->pc + 1), read8(cpu, cpu->pc + 2)); break;
+            case MODE_ABY: printf("%.2X %.2X",   read8(cpu, cpu->pc + 1), read8(cpu, cpu->pc + 2)); break;
+            case MODE_IMM: printf("%.2X   ",    read8(cpu, cpu->pc + 1));  break;
+            case MODE_ACC: case MODE_IMP: printf("        ");                                               break;
+            case MODE_INX: printf("%.2X  ", read8(cpu, cpu->pc + 1));  break;
+            case MODE_IND: printf("%.2X %.2X",   read8(cpu, cpu->pc + 1), read8(cpu, cpu->pc + 2)); break;
+            case MODE_INY: printf("%.2X   ", read8(cpu, cpu->pc + 1));  break;
+            case MODE_REL: printf("%.2X   ",     read8(cpu, cpu->pc + 1));  break;
+            case MODE_ZPG: printf("%.2X   ",     read8(cpu, cpu->pc + 1));  break;
+            case MODE_ZPX: printf("%.2X   ",   read8(cpu, cpu->pc + 1));  break;
+            case MODE_ZPY: printf("%.2X   ",   read8(cpu, cpu->pc + 1));  break;
+            default: // this should literally never be reached
+                printf("\nError: opcode $%X reading invalid addressing mode.\n", op->code);
+                break;
+        }
+        printf("\t");
+        
+        printf("%s ", op->label);
+        // Print assembly
+        switch (op->mode){
+            case MODE_ABS: printf("$%.4X    ",     read16(cpu, cpu->pc + 1)); break;
+            case MODE_ABX: printf("$%.4X,X  ",   read16(cpu, cpu->pc + 1)); break;
+            case MODE_ABY: printf("$%.4X,Y  ",   read16(cpu, cpu->pc + 1)); break;
+            case MODE_ACC: printf("A        ");                                   break;
+            case MODE_IMM: printf("#$%.2X   ",    read8(cpu, cpu->pc + 1));  break;
+            case MODE_IMP: printf("         ");                            break;
+            case MODE_INX: printf("($%.2X,X)", read8(cpu, cpu->pc + 1));  break;
+            case MODE_IND: printf("($%.4X)  ",   read16(cpu, cpu->pc + 1)); break;
+            case MODE_INY: printf("($%.2X),Y", read8(cpu, cpu->pc + 1));  break;
+            case MODE_REL: printf("$%.2X    ",     read8(cpu, cpu->pc + 1));  break;
+            case MODE_ZPG: printf("$%.2X    ",     read8(cpu, cpu->pc + 1));  break;
+            case MODE_ZPX: printf("$%.2X,X  ",   read8(cpu, cpu->pc + 1));  break;
+            case MODE_ZPY: printf("$%.2X,Y  ",   read8(cpu, cpu->pc + 1));  break;
+            default: // this should literally never be reached
+                printf("Error: opcode $%X reading invalid addressing mode.", op->code);
+                break;
+        }
+
+        
+    } else{
+        // Print memory location and undefined opcode 
+        printf("%X\t%s ", cpu->pc, "???");
+        //break;
+    }
+
+    //printf("\n");
 
 
 }

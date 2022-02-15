@@ -9,7 +9,11 @@ int main(){
     CPU* cpu = cpu_init();
 
     // need to mirror this
-    char* rom_path = "roms/dk.nes";
+    /*char* rom_path = "roms/dk.nes";
+    int rom_status = load_rom(rom_path, cpu->memory);*/
+
+    // Load the NESTEST rom
+    char* rom_path = "roms/nestest.nes";
     int rom_status = load_rom(rom_path, cpu->memory);
 
     if(rom_status == 0){
@@ -20,16 +24,32 @@ int main(){
     }
 
     // Set PC to first instruction
-    cpu->pc =  cpu->memory[0xfffc] | (cpu->memory[0xfffd] << 8);
+    //cpu->pc =  cpu->memory[0xfffc] | (cpu->memory[0xfffd] << 8);
+
+    // Set PC to NESTEST start point
+    cpu->pc = 0xc000;
     printf("PC: %x (%d)\n", cpu->pc, cpu->pc);
 
-    // Main execution loop
-    while(cpu->pc <= 0xffff){
+    bool running = true;
 
-        uint8_t opcode = cpu->memory[cpu->pc++];
+    int loop = 1;
+    int target_loop = 70;
+
+    // Main execution loop
+    while(running){
+
+        // Get basic data about current opcode
+        uint8_t opcode = cpu->memory[cpu->pc];
+        
         Op* op = get_op_data(opcode);
         Mode addr_mode = op->mode;
+
+        // print debug information
+        printf("[%d] ", loop);
+        disassemble_op(cpu, op);
+        printf("\tA: %.2X X: %.2X Y: %.2X SP: %.2X Reg: %.2X", cpu->a, cpu->x, cpu->y, cpu->s, cpu->p);
         
+        cpu->pc++;
         
         switch(opcode){
             case 0x00: BRK(cpu); break;
@@ -111,6 +131,7 @@ int main(){
             case 0x86: STX(cpu, addr_zpg(cpu)); break;
             case 0x88: DEY(cpu); break;
             case 0x8a: TXA(cpu); break;
+            case 0x8c: STY(cpu, addr_abs(cpu)); break;
             case 0x8d: STA(cpu, addr_abs(cpu)); break;
             case 0x8e: STX(cpu, addr_abs(cpu)); break;    
             case 0x90: BCC(cpu, addr_rel(cpu)); break;
@@ -182,8 +203,20 @@ int main(){
             case 0xf8: SED(cpu); break;
             case 0xf9: SBC(cpu, addr_aby(cpu)); break;
             case 0xfd: SBC(cpu, addr_abx(cpu)); break;
-            case 0xfe: INC(cpu, addr_abx(cpu)); break;        }
+            case 0xfe: INC(cpu, addr_abx(cpu)); break;
+            default:
+                printf("Error! Opcode 0x%X invalid. Quitting...\n", opcode);
+                running = false;
+                break;
+        }
 
+        /*if(running){
+            printf("\t\t0x02: %X\t0x03: %X\n", cpu->memory[0x02], cpu->memory[0x03]);
+            fflush(stdout);
+        }*/
+        printf("\n");
+        //fflush(stdout);
+        loop++;
     }
 
     // Run Dissassembler

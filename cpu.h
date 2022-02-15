@@ -58,7 +58,12 @@ uint8_t read8(CPU* cpu, uint16_t addr);
 uint16_t read16(CPU* cpu, uint16_t addr);
 
 Op* get_op_data(uint8_t opcode);
+
+// Original Disassembly function - loops through loaded ROM and prints full disassembly.
 void print_dissassembly(CPU* cpu, bool dump);
+
+// Disassembles a single line/instruction
+void disassemble_op(CPU* cpu, Op* op);
 
 /* ------------------------------------ Flag handling ------------------------------------ */
 
@@ -66,16 +71,16 @@ void print_dissassembly(CPU* cpu, bool dump);
    ---- ----
    NVss DIZC
 
- * (N)egative - Set if bit 7 of last operation set to 1
- * (O)verflow - Set if result of last op gave invalid twos complement result (i.e. 64+64=-128)
- * (B)reak - Set when BRK instr. executed and interrupt has been generated to process it.
- * (D)ecimal - (NOT USED ON NES) Processor will use BCD (instead of twos comp ???)
- * (I)nterrupt Disable - Forces processor to ignore interrupts if set
- * (Z)ero - set if result of last operation was 0.
- * (C)arry - set if last operation caused overflow from bit 7 or underflow from bit 0. */
+ *  (N)egative - Set if bit 7 of last operation set to 1
+ * O(v)erflow - Set if result of last op gave invalid twos complement result (i.e. 64+64=-128)
+ *  (B)reak - Set when BRK instr. executed and interrupt has been generated to process it.
+ *  (D)ecimal - (NOT USED ON NES) Processor will use BCD (instead of twos comp ???)
+ *  (I)nterrupt Disable - Forces processor to ignore interrupts if set
+ *  (Z)ero - set if result of last operation was 0.
+ *  (C)arry - set if last operation caused overflow from bit 7 or underflow from bit 0. */
 
 // Define a value (1 bit of the status register byte) for each flag
-enum flags { FLAG_C, FLAG_Z, FLAG_I, FLAG_D, FLAG_B, FLAG_O, FLAG_N };
+enum flags { FLAG_C, FLAG_Z, FLAG_I, FLAG_D, FLAG_B2, FLAG_B, FLAG_V, FLAG_N };
 
 // Set a given bit (flag) of the p register
 void set_flag(CPU* cpu, uint8_t flag);
