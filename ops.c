@@ -158,77 +158,82 @@ void BIT(CPU* cpu, uint16_t operand){
 }
 
 /* ------------------------------------ Arithmetic ------------------------------------ */
+// Add with Carry
 void ADC(CPU* cpu, uint16_t operand){
-    /* Add with carry
-     If the value has overflowed the overflow flag must be set.
-     An easy way to check for overflow is to see if the sign has changed
-     when it shouldn't have. */
-    uint8_t data = cpu->memory[operand];
+    uint8_t fetched = read8(cpu, operand);
 
-    // Thanks to calc84maniac from the EmuDev discord for this trick for
-    // checking if the overflow flag must be set:
-    // We use an int so the value is not limited to 8-bits.
-    int signed_result = (int8_t)cpu->a + (int8_t)data + check_flag(cpu, FLAG_C);
-    // Then compare to the value if it *were* limited to 8 bits. If they aren't equal there must be some overflow.
-    uint8_t overflow = (signed_result != (int8_t)signed_result);
+    // Add value to accumulator, accounting for carry
+    uint16_t sum = (uint16_t)cpu->a + (uint16_t)fetched + (uint16_t)check_flag(cpu, FLAG_C);
 
-    uint8_t carry = (signed_result > 0xFF); // carry if result over max range
-    
-    cpu->a = (uint8_t) (signed_result & 0x00FF); // store final result in acc as an 8-bit value again
-
-    if(overflow){
-        set_flag(cpu, FLAG_V);
-    } else{
-        clear_flag(cpu, FLAG_V);
-    }
-
-    if(carry){
+    // Set carry flag if value > 255
+    if(sum > 0xFF) {
         set_flag(cpu, FLAG_C);
     } else{
         clear_flag(cpu, FLAG_C);
     }
 
-    handle_flag_n(cpu, cpu->a);
-    handle_flag_z(cpu, cpu->a);
+    // Set zero flag if result is zero
+    if((sum & 0x00FF) == 0){
+        set_flag(cpu, FLAG_Z);
+    } else{
+        clear_flag(cpu, FLAG_Z);
+    }
 
+    // Set overflow flag if sign has changed incorrectly
+    if((~((uint16_t)cpu->a ^ (uint16_t)fetched) & ((uint16_t)cpu->a ^ (uint16_t)sum)) & 0x0080){
+        set_flag(cpu, FLAG_V);
+    } else{
+        clear_flag(cpu, FLAG_V);
+    }
+
+    // Set Negative flag to MSB of result
+    handle_flag_n(cpu, sum);
+
+    // Set acc to final result (convert back to 8bit)
+    cpu->a = sum & 0x00ff;
+
+    // Handle additional clock cycle
 
 }
 
 void SBC(CPU* cpu, uint16_t operand){
-    /* Subtract with carry
-     If the value has overflowed the overflow flag must be set.
-     An easy way to check for overflow is to see if the sign has changed
-     when it shouldn't have. */
-    uint8_t data = cpu->memory[operand];
+    uint8_t temp = read8(cpu, operand);
 
-    // Get the complement of the data as we are subtracting
-    data = ~data + 1;
+    // Invert the value to allow subtraction
+    uint16_t fetched = ((uint16_t)temp ^ 0x00FF);
 
-    // Thanks to calc84maniac from the EmuDev discord for this trick for
-    // checking if the overflow flag must be set:
-    // We use an int so the value is not limited to 8-bits.
-    int signed_result = (int8_t)cpu->a + (int8_t)data + check_flag(cpu, FLAG_C);
-    // Then compare to the value if it *were* limited to 8 bits. If they aren't equal there must be some overflow.
-    uint8_t overflow = (signed_result != (int8_t)signed_result);
+    // Add value to accumulator, accounting for carry
+    uint16_t sum = (uint16_t)cpu->a + (uint16_t)fetched + (uint16_t)check_flag(cpu, FLAG_C);
 
-    uint8_t carry = (signed_result > 0xFF); // carry if result over max range
-    
-    cpu->a = (uint8_t) (signed_result & 0x00FF); // store final result in acc as an 8-bit value again
-
-    if(overflow){
-        set_flag(cpu, FLAG_V);
-    } else{
-        clear_flag(cpu, FLAG_V);
-    }
-
-    if(carry){
+    // Set carry flag if value > 255
+    if(sum > 0xFF) {
         set_flag(cpu, FLAG_C);
     } else{
         clear_flag(cpu, FLAG_C);
     }
 
-    handle_flag_n(cpu, cpu->a);
-    handle_flag_z(cpu, cpu->a);
+    // Set zero flag if result is zero
+    if((sum & 0x00FF) == 0){
+        set_flag(cpu, FLAG_Z);
+    } else{
+        clear_flag(cpu, FLAG_Z);
+    }
+
+    // Set overflow flag if sign has changed incorrectly
+    if((~((uint16_t)cpu->a ^ (uint16_t)fetched) & ((uint16_t)cpu->a ^ (uint16_t)sum)) & 0x0080){
+        set_flag(cpu, FLAG_V);
+    } else{
+        clear_flag(cpu, FLAG_V);
+    }
+
+    // Set Negative flag to MSB of result
+    handle_flag_n(cpu, sum);
+
+    // Set acc to final result (convert back to 8bit)
+    cpu->a = sum & 0x00ff;
+
+    // Handle additional clock cycle
+
 }
 
 void CMP(CPU* cpu, uint16_t operand){
@@ -511,7 +516,7 @@ void RTS(CPU* cpu){
 /* ------------------------------------ Branches ------------------------------------ */
 void BCC(CPU* cpu, uint16_t branch_addr){
     // branch if carry flag clear
-    if(!check_flag(cpu, FLAG_C)){
+    if(check_flag(cpu, FLAG_C) == false){
         cpu->pc = branch_addr;
     }
 }
