@@ -31,9 +31,10 @@ int main(){
     printf("PC: %x (%d)\n", cpu->pc, cpu->pc);
 
     bool running = true;
+    //print_dissassembly(cpu, false);
 
     int loop = 1;
-    int target_loop = 70;
+    //int target_loop = 70;
 
     // Main execution loop
     while(running){
@@ -70,7 +71,7 @@ int main(){
             case 0x1d: ORA(cpu, addr_abx(cpu)); break;
             case 0x1e: ASL(cpu, addr_abx(cpu), addr_mode); break;
             case 0x20: JSR(cpu, addr_abs(cpu)); break;
-            case 0x21: AND(cpu, addr_iny(cpu)); break;
+            case 0x21: AND(cpu, addr_inx(cpu)); break;
             case 0x24: BIT(cpu, addr_zpg(cpu)); break;
             case 0x25: AND(cpu, addr_zpg(cpu)); break;
             case 0x26: ROL(cpu, addr_zpg(cpu), addr_mode); break;

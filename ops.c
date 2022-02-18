@@ -180,6 +180,10 @@ void ADC(CPU* cpu, uint16_t operand){
     }
 
     // Set overflow flag if sign has changed incorrectly
+    // Sources:
+    // - http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+    // - https://forums.nesdev.org/viewtopic.php?t=6331
+    // - https://github.com/OneLoneCoder/olcNES/blob/master/Part%232%20-%20CPU/olc6502.cpp
     if((~((uint16_t)cpu->a ^ (uint16_t)fetched) & ((uint16_t)cpu->a ^ (uint16_t)sum)) & 0x0080){
         set_flag(cpu, FLAG_V);
     } else{
@@ -196,6 +200,7 @@ void ADC(CPU* cpu, uint16_t operand){
 
 }
 
+// Subtract with carry
 void SBC(CPU* cpu, uint16_t operand){
     uint8_t temp = read8(cpu, operand);
 
@@ -239,7 +244,8 @@ void SBC(CPU* cpu, uint16_t operand){
 void CMP(CPU* cpu, uint16_t operand){
     //printf("\n\n CMP P before: %.2x\n", cpu->p);
     uint8_t pulled = read8(cpu, operand);
-    uint8_t val = cpu->a - pulled;
+
+    uint16_t val = (uint16_t)cpu->a - (uint16_t)pulled;
 
     // Set carry flag if Accumulator greater than read value
     if( cpu->a >= pulled ){
@@ -249,7 +255,7 @@ void CMP(CPU* cpu, uint16_t operand){
     }
     
     // Set zero flag if Accumulator == the value in location operand
-    handle_flag_z(cpu, val);
+    handle_flag_z(cpu, (val & 0x00FF));
 
     // Set N flag if bit 7 of val is set (i.e. val is signed)
     handle_flag_n(cpu, val);
@@ -397,10 +403,10 @@ void LSR(CPU* cpu, uint16_t operand, Mode addr_mode){
 
 void ROL(CPU* cpu, uint16_t operand, Mode addr_mode){
     if(addr_mode == MODE_ACC){
-        uint8_t carry = (cpu->a << 7) & 0x01; 
+        uint8_t carry = cpu->a & 0x80; 
 
         // carry <-- accumulator <-- new carry
-        cpu->a = (check_flag(cpu, FLAG_C) & 0x01) | (cpu->a << 1);
+        cpu->a = ((uint8_t)check_flag(cpu, FLAG_C)) | (cpu->a << 1);
 
         if(carry){
             set_flag(cpu, FLAG_C);
@@ -411,10 +417,11 @@ void ROL(CPU* cpu, uint16_t operand, Mode addr_mode){
         handle_flag_n(cpu, cpu->a);
     } else{
         uint16_t data = cpu->memory[operand];
-        uint8_t carry = (data << 7) & 0x01; 
+        uint8_t carry = data & 0x80; 
 
         // carry <-- accumulator <-- new carry
-        data = (check_flag(cpu, FLAG_C) & 0x01) | (data << 1);
+        data = ((uint8_t)check_flag(cpu, FLAG_C)) | (data << 1);
+        cpu->memory[operand] = (uint8_t)data;
 
         if(carry){
             set_flag(cpu, FLAG_C);
@@ -431,7 +438,7 @@ void ROR(CPU* cpu, uint16_t operand, Mode addr_mode){
         uint8_t carry = cpu->a & 0x01; 
 
         // carry --> accumulator --> new carry
-        cpu->a = (check_flag(cpu, FLAG_C) << 7) | (cpu->a >> 1);
+        cpu->a = ((uint8_t)check_flag(cpu, FLAG_C) << 7) | (cpu->a >> 1) & 0x00FF;
 
         if(carry){
             set_flag(cpu, FLAG_C);
@@ -439,6 +446,7 @@ void ROR(CPU* cpu, uint16_t operand, Mode addr_mode){
             clear_flag(cpu, FLAG_C);
         }
 
+        handle_flag_z(cpu, cpu->a);
         handle_flag_n(cpu, cpu->a);
     } else{
         uint16_t data = cpu->memory[operand];
@@ -446,6 +454,7 @@ void ROR(CPU* cpu, uint16_t operand, Mode addr_mode){
 
         // carry --> data --> new carry
         data = (check_flag(cpu, FLAG_C) << 7) | (data >> 1);
+        cpu->memory[operand] = (uint8_t)data & 0x00FF;
 
         if(carry){
             set_flag(cpu, FLAG_C);
@@ -453,7 +462,8 @@ void ROR(CPU* cpu, uint16_t operand, Mode addr_mode){
             clear_flag(cpu, FLAG_C);
         }
 
-        handle_flag_n(cpu, data);
+        handle_flag_z(cpu, data & 0x00FF);
+        handle_flag_n(cpu, data & 0x00FF);
     }
 }
 

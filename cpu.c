@@ -127,17 +127,33 @@ uint16_t addr_ind(CPU* cpu){
 }
 
 // Indirect (X indexed)
-uint16_t addr_inx(CPU* cpu){ 
-    uint8_t addr_1 = (cpu->memory[cpu->pc++] + cpu->x) % 0x100;
-    uint8_t addr_2 = cpu->memory[addr_1] | cpu->memory[addr_1 + 1] << 8;
-    return addr_2;
+uint16_t addr_inx(CPU* cpu){
+    uint16_t addr;
+    uint8_t fetched = read8(cpu, cpu->pc);
+    cpu->pc++;
+
+    // Read low and high bytes separately. 
+    // Address wraps around at 0xFF back to 0x00.
+    uint16_t low = read8(cpu, (fetched + (uint16_t)cpu->x) & 0x00FF);
+    uint16_t high = read8(cpu, (fetched + (uint16_t)cpu->x + 1) & 0x00FF);
+
+    addr = (high << 8) | low;
+    return addr;
 }
 
 // Indirect (Y indexed)
 uint16_t addr_iny(CPU* cpu){
-    uint8_t addr_1 = cpu->memory[cpu->pc++];
-    uint16_t addr_2 = cpu->memory[addr_1] | cpu->memory[addr_1 + 1] << 8;
-    return addr_2 + cpu->y;
+    uint16_t addr;
+    uint16_t fetched = read8(cpu, cpu->pc);
+    cpu->pc++;
+
+    // Read low and high bytes separately.
+    uint16_t low = read8(cpu, fetched & 0x00FF);
+    uint16_t high = read8(cpu, (fetched + 1) & 0x00FF);
+
+    addr = (high << 8) | low;
+    addr += cpu->y;
+    return addr;
 }
 
 // Relative - adjusts PC by a given signed +/- offset
@@ -148,13 +164,22 @@ uint16_t addr_rel(CPU* cpu){
 }
 
 // Zero Page
-uint8_t addr_zpg(CPU* cpu){ return cpu->memory[cpu->pc++]; }
+uint8_t addr_zpg(CPU* cpu){
+    uint16_t addr = cpu->memory[cpu->pc++] & 0x00FF;
+    return addr;
+}
 
 // Zero Page (X indexed)
-uint8_t addr_zpx(CPU* cpu){ return (cpu->memory[cpu->pc++] + cpu->x) % 0x100; }
+uint8_t addr_zpx(CPU* cpu){
+    uint16_t addr = (cpu->memory[cpu->pc++] + cpu->x) & 0x00FF;
+    return addr;
+}
 
 // Zero Page (Y indexed)
-uint8_t addr_zpy(CPU* cpu){ return (cpu->memory[cpu->pc++] + cpu->y) % 0x100; }
+uint8_t addr_zpy(CPU* cpu){
+    uint16_t addr = (cpu->memory[cpu->pc++] + cpu->y) & 0x00FF;
+    return addr;
+}
 
 // REPLACE THIS you fool. Keep the array, fill in the blanks with NULL (or a filler blank op), then just index the array
 // The function is totally unnecessary
@@ -422,8 +447,8 @@ void disassemble_op(CPU* cpu, Op* op){
             case MODE_ABX: printf("%.2X %.2X",   read8(cpu, cpu->pc + 1), read8(cpu, cpu->pc + 2)); break;
             case MODE_ABY: printf("%.2X %.2X",   read8(cpu, cpu->pc + 1), read8(cpu, cpu->pc + 2)); break;
             case MODE_IMM: printf("%.2X   ",    read8(cpu, cpu->pc + 1));  break;
-            case MODE_ACC: case MODE_IMP: printf("        ");                                               break;
-            case MODE_INX: printf("%.2X  ", read8(cpu, cpu->pc + 1));  break;
+            case MODE_ACC: case MODE_IMP: printf("        "); break;                                               break;
+            case MODE_INX: printf("%.2X   ", read8(cpu, cpu->pc + 1));  break;
             case MODE_IND: printf("%.2X %.2X",   read8(cpu, cpu->pc + 1), read8(cpu, cpu->pc + 2)); break;
             case MODE_INY: printf("%.2X   ", read8(cpu, cpu->pc + 1));  break;
             case MODE_REL: printf("%.2X   ",     read8(cpu, cpu->pc + 1));  break;
@@ -445,7 +470,7 @@ void disassemble_op(CPU* cpu, Op* op){
             case MODE_ACC: printf("A        ");                                   break;
             case MODE_IMM: printf("#$%.2X   ",    read8(cpu, cpu->pc + 1));  break;
             case MODE_IMP: printf("         ");                            break;
-            case MODE_INX: printf("($%.2X,X)", read8(cpu, cpu->pc + 1));  break;
+            case MODE_INX: printf("($%.2X,X) ", read8(cpu, cpu->pc + 1));  break;
             case MODE_IND: printf("($%.4X)  ",   read16(cpu, cpu->pc + 1)); break;
             case MODE_INY: printf("($%.2X),Y", read8(cpu, cpu->pc + 1));  break;
             case MODE_REL: printf("$%.2X    ",     read8(cpu, cpu->pc + 1));  break;
