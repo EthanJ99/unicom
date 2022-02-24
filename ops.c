@@ -6,6 +6,7 @@
 void LDA(CPU* cpu, uint16_t operand){
     //printf("\n\nLDA P before: %.2x\n", cpu->p);
     cpu->a = read8(cpu, operand);
+    printf("[LDA] addr: %.4X a: %.2X", operand, cpu->a);
 
     handle_flag_z(cpu, cpu->a);
     handle_flag_n(cpu, cpu->a);
@@ -15,14 +16,14 @@ void LDA(CPU* cpu, uint16_t operand){
 
 void LDX(CPU* cpu, uint16_t operand){
     cpu->x = read8(cpu, operand);
-
+    printf("[LDX] addr: %.4X a: %.2X", operand, cpu->a);
     handle_flag_z(cpu, cpu->x);
     handle_flag_n(cpu, cpu->x);
 }
 
 void LDY(CPU* cpu, uint16_t operand){
     cpu->y = read8(cpu, operand);
-
+    printf("[LDY] addr: %.4X a: %.2X", operand, cpu->a);
     handle_flag_z(cpu, cpu->y);
     handle_flag_n(cpu, cpu->y);
 }
@@ -30,15 +31,19 @@ void LDY(CPU* cpu, uint16_t operand){
 /* ---------------------------- Store ---------------------------- */
 void STA(CPU* cpu, uint16_t operand){
     //printf("\n\nSTA P before: %.2x\n", cpu->p);
+    
     cpu->memory[operand] = cpu->a;
+    printf("[STA] addr: %.4X val at addr: %.2X a: %.2X", operand, cpu->memory[operand], cpu->a);
     //printf("STA P after: %.2x\n\n", cpu->p);
 }
 
 void STX(CPU* cpu, uint16_t operand){
+    printf("[STA] addr: %.4X a: %.2X", operand, cpu->a);
     cpu->memory[operand] = cpu->x;
 }
 
 void STY(CPU* cpu, uint16_t operand){
+    printf("[STA] addr: %.4X a: %.2X", operand, cpu->a);
     cpu->memory[operand] = cpu->y;
 }
 
@@ -493,6 +498,8 @@ void RTI(CPU* cpu){
 // Jump to a given memory address
 void JMP(CPU* cpu, uint16_t operand){
     cpu->pc = operand;
+    printf("[JMP] addr: %.4X val: %.2X PC: %.2X", operand, cpu->memory[operand], cpu->pc);
+    
 }
 
 void JSR(CPU* cpu, uint16_t operand){

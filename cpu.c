@@ -117,13 +117,44 @@ uint16_t addr_acc(CPU* cpu){
 }
 
 // Immediate
-uint16_t addr_imm(CPU* cpu){ return cpu->pc++; }
+uint16_t addr_imm(CPU* cpu){
+    //printf("\naddr: %.4X val: %.2X\n", cpu->pc + 1, cpu->memory[cpu->pc + 1]);
+    return cpu->pc++;
+}
 
 // Indirect
 uint16_t addr_ind(CPU* cpu){
-    uint16_t addr_1 = addr_abs(cpu);
-    uint16_t addr_2 = cpu->memory[addr_1] | cpu->memory[addr_1 + 1] << 8;
-    return addr_2;
+    // Indirect reads an address from memory, which is used as a pointer to the true address
+    // that will be used by the instruction.
+
+    // Read low/high bytes of pointer address separately
+    uint8_t low = read8(cpu, cpu->pc);
+    cpu->pc++;
+    uint8_t high = read8(cpu, cpu->pc);
+    cpu->pc++;
+
+    // Combine into full pointer
+    uint16_t addr = (uint16_t)low | ((uint16_t)high << 8);
+    
+    // The CPU has a bug: If the low byte falls on the boundary of an (8-bit) page in memory,
+    // it wraps around when we read the high byte (i.e. if we're reading low from 0x02FF,
+    // we will read the high byte from 0x0200 instead of 0x300 as expected).
+    
+    // I want it known to whoever reads this code that trying to debug this took over a week and nearly made
+    // me cry multiple times. I then googled it and it turns out its a known problem with a disgustingly simple
+    // solution. God bless the internet (despite its many crimes).
+    if(low == 0xFF){
+        low = read8(cpu, addr);
+        high = read8(cpu, addr & 0xFF00); // wrap round back to the start of the page
+        addr = (uint16_t)low | ((uint16_t)high << 8);
+    } else{
+        low = read8(cpu, addr);
+        high = read8(cpu, addr + 1); // don't wrap round
+        addr = (uint16_t)low | ((uint16_t)high << 8);
+    }
+
+    return addr;
+
 }
 
 // Indirect (X indexed)
@@ -359,6 +390,8 @@ Op* get_op_data(uint8_t opcode){
 
     };
 
+    static Op invalid_instruction = {0xFF, "XXX", 0, MODE_IMP};
+
     Op* found = NULL;
 
     static uint8_t op_total = sizeof(oplist) / sizeof(oplist[0]);
@@ -371,10 +404,10 @@ Op* get_op_data(uint8_t opcode){
     }
 
     // printf("$%X unimplemented.\n", opcode);
-    return NULL;
+    return &invalid_instruction;
 }
 
-void print_dissassembly(CPU* cpu, bool dump){
+void print_disassembly(CPU* cpu, bool dump){
     /*if(dump){
         time_t raw_time;
         struct tm *info;
@@ -434,61 +467,53 @@ void print_dissassembly(CPU* cpu, bool dump){
 }
 
 void disassemble_op(CPU* cpu, Op* op){
-    uint8_t opcode = op->code;
-
-    if(op != NULL){
-        // Print opcode memory location
-        printf("%X\t", cpu->pc);
-
-        // Print raw opcode and instruction values as hex
-        printf("%.2X ", opcode);
-        switch (op->mode){
-            case MODE_ABS: printf("%.2X %.2X",     read8(cpu, cpu->pc + 1), read8(cpu, cpu->pc + 2)); break;
-            case MODE_ABX: printf("%.2X %.2X",   read8(cpu, cpu->pc + 1), read8(cpu, cpu->pc + 2)); break;
-            case MODE_ABY: printf("%.2X %.2X",   read8(cpu, cpu->pc + 1), read8(cpu, cpu->pc + 2)); break;
-            case MODE_IMM: printf("%.2X   ",    read8(cpu, cpu->pc + 1));  break;
-            case MODE_ACC: case MODE_IMP: printf("        "); break;                                               break;
-            case MODE_INX: printf("%.2X   ", read8(cpu, cpu->pc + 1));  break;
-            case MODE_IND: printf("%.2X %.2X",   read8(cpu, cpu->pc + 1), read8(cpu, cpu->pc + 2)); break;
-            case MODE_INY: printf("%.2X   ", read8(cpu, cpu->pc + 1));  break;
-            case MODE_REL: printf("%.2X   ",     read8(cpu, cpu->pc + 1));  break;
-            case MODE_ZPG: printf("%.2X   ",     read8(cpu, cpu->pc + 1));  break;
-            case MODE_ZPX: printf("%.2X   ",   read8(cpu, cpu->pc + 1));  break;
-            case MODE_ZPY: printf("%.2X   ",   read8(cpu, cpu->pc + 1));  break;
-            default: // this should literally never be reached
-                printf("\nError: opcode $%X reading invalid addressing mode.\n", op->code);
-                break;
-        }
-        printf("\t");
-        
-        printf("%s ", op->label);
-        // Print assembly
-        switch (op->mode){
-            case MODE_ABS: printf("$%.4X    ",     read16(cpu, cpu->pc + 1)); break;
-            case MODE_ABX: printf("$%.4X,X  ",   read16(cpu, cpu->pc + 1)); break;
-            case MODE_ABY: printf("$%.4X,Y  ",   read16(cpu, cpu->pc + 1)); break;
-            case MODE_ACC: printf("A        ");                                   break;
-            case MODE_IMM: printf("#$%.2X   ",    read8(cpu, cpu->pc + 1));  break;
-            case MODE_IMP: printf("         ");                            break;
-            case MODE_INX: printf("($%.2X,X) ", read8(cpu, cpu->pc + 1));  break;
-            case MODE_IND: printf("($%.4X)  ",   read16(cpu, cpu->pc + 1)); break;
-            case MODE_INY: printf("($%.2X),Y", read8(cpu, cpu->pc + 1));  break;
-            case MODE_REL: printf("$%.2X    ",     read8(cpu, cpu->pc + 1));  break;
-            case MODE_ZPG: printf("$%.2X    ",     read8(cpu, cpu->pc + 1));  break;
-            case MODE_ZPX: printf("$%.2X,X  ",   read8(cpu, cpu->pc + 1));  break;
-            case MODE_ZPY: printf("$%.2X,Y  ",   read8(cpu, cpu->pc + 1));  break;
-            default: // this should literally never be reached
-                printf("Error: opcode $%X reading invalid addressing mode.", op->code);
-                break;
-        }
-
-        
-    } else{
-        // Print memory location and undefined opcode 
-        printf("%X\t%s ", cpu->pc, "???");
-        //break;
+    // Print opcode memory location
+    printf("%X\t", cpu->pc);
+    
+    // Print raw opcode and instruction values as hex
+    printf("%.2X ", op->code);
+    switch (op->mode){
+        case MODE_ABS: printf("%.2X %.2X",  read8(cpu, cpu->pc + 1), read8(cpu, cpu->pc + 2));  break;
+        case MODE_ABX: printf("%.2X %.2X",  read8(cpu, cpu->pc + 1), read8(cpu, cpu->pc + 2));  break;
+        case MODE_ABY: printf("%.2X %.2X",  read8(cpu, cpu->pc + 1), read8(cpu, cpu->pc + 2));  break;
+        case MODE_IMM: printf("%.2X   ",    read8(cpu, cpu->pc + 1));                           break;
+        case MODE_ACC:
+        case MODE_IMP: printf("        ");                                                      break;
+        case MODE_INX: printf("%.2X   ",    read8(cpu, cpu->pc + 1));                           break;
+        case MODE_IND: printf("%.2X %.2X",  read8(cpu, cpu->pc + 1), read8(cpu, cpu->pc + 2));  break;
+        case MODE_INY: printf("%.2X   ",    read8(cpu, cpu->pc + 1));                           break;
+        case MODE_REL: printf("%.2X   ",    read8(cpu, cpu->pc + 1));                           break;
+        case MODE_ZPG: printf("%.2X   ",    read8(cpu, cpu->pc + 1));                           break;
+        case MODE_ZPX: printf("%.2X   ",    read8(cpu, cpu->pc + 1));                           break;
+        case MODE_ZPY: printf("%.2X   ",    read8(cpu, cpu->pc + 1));                           break;
+        default: // this should literally never be reached
+            printf("\nError: opcode $%.X reading invalid addressing mode.\n", op->code);
+            break;
+    }
+    printf("\t");
+    
+    printf("%s ", op->label);
+    // Print assembly
+    switch (op->mode){
+        case MODE_ABS: printf("$%.4X    ",     read16(cpu, cpu->pc + 1)); break;
+        case MODE_ABX: printf("$%.4X,X  ",   read16(cpu, cpu->pc + 1)); break;
+        case MODE_ABY: printf("$%.4X,Y  ",   read16(cpu, cpu->pc + 1)); break;
+        case MODE_ACC: printf("A        ");                                   break;
+        case MODE_IMM: printf("#$%.2X   ",    read8(cpu, cpu->pc + 1));  break;
+        case MODE_IMP: printf("         ");                            break;
+        case MODE_INX: printf("($%.2X,X) ", read8(cpu, cpu->pc + 1));  break;
+        case MODE_IND: printf("($%.4X)  ",   read16(cpu, cpu->pc + 1)); break;
+        case MODE_INY: printf("($%.2X),Y", read8(cpu, cpu->pc + 1));  break;
+        case MODE_REL: printf("$%.4X    ",    cpu->pc + read8(cpu, cpu->pc + 1) + 2);  break;
+        case MODE_ZPG: printf("$%.2X    ",     read8(cpu, cpu->pc + 1));  break;
+        case MODE_ZPX: printf("$%.2X,X  ",   read8(cpu, cpu->pc + 1));  break;
+        case MODE_ZPY: printf("$%.2X,Y  ",   read8(cpu, cpu->pc + 1));  break;
+        default: // this should literally never be reached
+            printf("Error: opcode $%.X reading invalid addressing mode.", op->code);
+            break;
     }
 
+    fflush(stdout);
     //printf("\n");
 
 

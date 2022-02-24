@@ -31,10 +31,8 @@ int main(){
     printf("PC: %x (%d)\n", cpu->pc, cpu->pc);
 
     bool running = true;
-    //print_dissassembly(cpu, false);
 
     int loop = 1;
-    //int target_loop = 70;
 
     // Main execution loop
     while(running){
@@ -48,7 +46,7 @@ int main(){
         // print debug information
         printf("[%d] ", loop);
         disassemble_op(cpu, op);
-        printf("\tA: %.2X X: %.2X Y: %.2X SP: %.2X Reg: %.2X", cpu->a, cpu->x, cpu->y, cpu->s, cpu->p);
+        printf("\tA:%.2X X:%.2X Y:%.2X P:%.2X SP:%.2X ", cpu->a, cpu->x, cpu->y, cpu->p, cpu->s);
         
         cpu->pc++;
         
@@ -89,7 +87,6 @@ int main(){
             case 0x39: AND(cpu, addr_aby(cpu)); break;
             case 0x3d: AND(cpu, addr_abx(cpu)); break;
             case 0x3e: ROL(cpu, addr_abx(cpu), addr_mode); break;
-            //case 0x3f: RLA(cpu, addr_abx(cpu)); break;
             case 0x40: RTI(cpu); break;
             case 0x41: EOR(cpu, addr_inx(cpu)); break;
             case 0x45: EOR(cpu, addr_zpg(cpu)); break;
@@ -121,7 +118,7 @@ int main(){
             case 0x70: BVS(cpu, addr_rel(cpu)); break;
             case 0x71: ADC(cpu, addr_iny(cpu)); break;
             case 0x75: ADC(cpu, addr_zpx(cpu)); break;
-            case 0x76: ROR(cpu, addr_zpg(cpu), addr_mode); break;
+            case 0x76: ROR(cpu, addr_zpx(cpu), addr_mode); break;
             case 0x78: SEI(cpu); break;
             case 0x79: ADC(cpu, addr_abs(cpu)); break;
             case 0x7d: ADC(cpu, addr_abx(cpu)); break;
@@ -205,24 +202,25 @@ int main(){
             case 0xf9: SBC(cpu, addr_aby(cpu)); break;
             case 0xfd: SBC(cpu, addr_abx(cpu)); break;
             case 0xfe: INC(cpu, addr_abx(cpu)); break;
+
+            // Currently handles invalid ops by just using the NOP instruction
             default:
-                printf("Error! Opcode 0x%X invalid. Quitting...\n", opcode);
-                running = false;
+                NOP(cpu);
                 break;
         }
 
-        /*if(running){
-            printf("\t\t0x02: %X\t0x03: %X\n", cpu->memory[0x02], cpu->memory[0x03]);
-            fflush(stdout);
-        }*/
         printf("\n");
-        //fflush(stdout);
+        fflush(stdout);
         loop++;
+        
+        if(cpu->pc == 0xC6BC){
+            running = false;
+        }
+        
     }
 
-    // Run Dissassembler
-    // print_dissassembly(cpu, false);
-
+    // Print nestest results
+    printf("NESTEST Results [0x02]: %.2X [0x03]: %.2X", cpu->memory[0x02], cpu->memory[0x03]);
 
     return 0;
 }

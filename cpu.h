@@ -60,7 +60,7 @@ uint16_t read16(CPU* cpu, uint16_t addr);
 Op* get_op_data(uint8_t opcode);
 
 // Original Disassembly function - loops through loaded ROM and prints full disassembly.
-void print_dissassembly(CPU* cpu, bool dump);
+void print_disassembly(CPU* cpu, bool dump);
 
 // Disassembles a single line/instruction
 void disassemble_op(CPU* cpu, Op* op);
