@@ -47,6 +47,7 @@ int main(){
         printf("[%d] ", loop);
         disassemble_op(cpu, op);
         printf("\tA:%.2X X:%.2X Y:%.2X P:%.2X SP:%.2X ", cpu->a, cpu->x, cpu->y, cpu->p, cpu->s);
+        printf(" Cycles: %d ", cpu->cycles);
         
         cpu->pc++;
         
@@ -208,6 +209,18 @@ int main(){
                 NOP(cpu);
                 break;
         }
+
+        // update elapsed cycles
+        cpu->cycles += op->cycles;
+
+        // some instruction+addr mode combos take an extra cycle (e.g. if a page boundary is crossed).
+        if(cpu->addr_extra_cycle && cpu->instr_extra_cycle){
+            cpu->cycles++;
+        }
+
+        cpu->addr_extra_cycle = false;
+        cpu->instr_extra_cycle = false;
+        
 
         printf("\n");
         fflush(stdout);

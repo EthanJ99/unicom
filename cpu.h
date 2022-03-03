@@ -45,6 +45,14 @@ typedef struct CPU{
 
     // Processor Status Register 
     uint8_t p;
+
+    // Number of cycles taken
+    int cycles;
+
+    // helped values used to determine if the combination of addressing mode and instruction
+    // will lead to an extra clock cycle being used up
+    bool addr_extra_cycle;
+    bool instr_extra_cycle;
 } CPU;
 
 // Return a CPU with some preset values for its registers and memory

@@ -14,6 +14,8 @@ CPU* cpu_init(void){
     cpu->s = 0xFD;
     cpu->p = 0x24;
 
+    cpu->cycles = 7;
+
     return cpu;
 }
 
@@ -97,16 +99,26 @@ uint16_t addr_abs(CPU* cpu){
 
 // Absolute (X indexed)
 uint16_t addr_abx(CPU* cpu){
-    return addr_abs(cpu) + cpu->x;
+    uint16_t fetched = addr_abs(cpu);
+    uint16_t addr = fetched + cpu->x;
 
-    // Need to account for page crossing
+    if( (fetched & 0xFF00) != (addr & 0xFF00) ){
+        cpu->addr_extra_cycle = true; // alert CPU to +1 cycle if page boundary crossed
+    }
+
+    return addr;
 }
 
 // Absolute (Y indexed)
 uint16_t addr_aby(CPU* cpu){
-    return addr_abs(cpu) + cpu->y;
+    uint16_t fetched = addr_abs(cpu);
+    uint16_t addr = fetched + cpu->y;
 
-    // Need to account for page crossing
+    if( (fetched & 0xFF00) != (addr & 0xFF00) ){
+        cpu->addr_extra_cycle = true; // alert CPU to +1 cycle if page boundary crossed
+    }
+
+    return addr;
 }
 
 // Accumulator
@@ -169,6 +181,7 @@ uint16_t addr_inx(CPU* cpu){
     uint16_t high = read8(cpu, (fetched + (uint16_t)cpu->x + 1) & 0x00FF);
 
     addr = (high << 8) | low;
+    
     return addr;
 }
 
@@ -183,7 +196,13 @@ uint16_t addr_iny(CPU* cpu){
     uint16_t high = read8(cpu, (fetched + 1) & 0x00FF);
 
     addr = (high << 8) | low;
+    
+
     addr += cpu->y;
+
+    if( (addr & 0xFF00) != (high << 8) ){
+        cpu->addr_extra_cycle = true; // alert CPU to +1 cycle if page boundary crossed
+    }
     return addr;
 }
 
@@ -230,14 +249,14 @@ Op* get_op_data(uint8_t opcode){
         {0x10, "BPL", 2, MODE_REL},
         {0x11, "ORA", 5, MODE_INY},
         {0x15, "ORA", 4, MODE_ZPX},
-        {0x16, "ASL", 5, MODE_ZPX},
+        {0x16, "ASL", 6, MODE_ZPX},
         {0x18, "CLC", 2, MODE_IMP},
         {0x19, "ORA", 4, MODE_ABY},
         {0x1d, "ORA", 4, MODE_ABX},
         {0x1e, "ASL", 7, MODE_ABX},
 
         {0x20, "JSR", 6, MODE_ABS},
-        {0x21, "AND", 5, MODE_INY},
+        {0x21, "AND", 6, MODE_INX},
         {0x24, "BIT", 3, MODE_ZPG},
         {0x25, "AND", 3, MODE_ZPG},
         {0x26, "ROL", 5, MODE_ZPG},

@@ -11,3 +11,7 @@
 16.Feb.2022:
 - Fixed ADC/SBC not setting proper flags
 - Fixed ROL implementation.
+
+24.Feb.2022:
+- Fixed indirect JMP jumping to wrong location
+- Cleaned up invalid opcode handling

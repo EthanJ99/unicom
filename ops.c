@@ -4,17 +4,18 @@
 
 /* ---------------------------- Load ---------------------------- */
 void LDA(CPU* cpu, uint16_t operand){
-    //printf("\n\nLDA P before: %.2x\n", cpu->p);
+    cpu->instr_extra_cycle = true; // inform CPU this instruction takes +1 cycles under certain addr. modes
+
     cpu->a = read8(cpu, operand);
     printf("[LDA] addr: %.4X a: %.2X", operand, cpu->a);
 
     handle_flag_z(cpu, cpu->a);
     handle_flag_n(cpu, cpu->a);
-
-    //printf("LDA P after: %.2x\n\n", cpu->p);
 }
 
 void LDX(CPU* cpu, uint16_t operand){
+    cpu->instr_extra_cycle = true; // inform CPU this instruction takes +1 cycles under certain addr. modes
+
     cpu->x = read8(cpu, operand);
     printf("[LDX] addr: %.4X a: %.2X", operand, cpu->a);
     handle_flag_z(cpu, cpu->x);
@@ -22,6 +23,8 @@ void LDX(CPU* cpu, uint16_t operand){
 }
 
 void LDY(CPU* cpu, uint16_t operand){
+    cpu->instr_extra_cycle = true; // inform CPU this instruction takes +1 cycles under certain addr. modes
+
     cpu->y = read8(cpu, operand);
     printf("[LDY] addr: %.4X a: %.2X", operand, cpu->a);
     handle_flag_z(cpu, cpu->y);
@@ -117,6 +120,8 @@ void PLP(CPU* cpu){
 
 /* ---------------------------- Logical ---------------------------- */
 void AND(CPU* cpu, uint16_t operand){
+    cpu->instr_extra_cycle = true; // inform CPU this instruction takes +1 cycles under certain addr. modes
+
     //printf("\n\n AND P before: %.2x\n", cpu->p);
     cpu->a &= read8(cpu, operand);
 
@@ -127,6 +132,7 @@ void AND(CPU* cpu, uint16_t operand){
 }
 
 void EOR(CPU* cpu, uint16_t operand){
+    cpu->instr_extra_cycle = true; // inform CPU this instruction takes +1 cycles under certain addr. modes
     cpu->a ^= read8(cpu, operand);
 
     // handle Z/N flags
@@ -135,6 +141,8 @@ void EOR(CPU* cpu, uint16_t operand){
 }
 
 void ORA(CPU* cpu, uint16_t operand){
+    cpu->instr_extra_cycle = true; // inform CPU this instruction takes +1 cycles under certain addr. modes
+
     cpu->a |= read8(cpu, operand);
 
     // handle Z/N flags
@@ -165,6 +173,8 @@ void BIT(CPU* cpu, uint16_t operand){
 /* ------------------------------------ Arithmetic ------------------------------------ */
 // Add with Carry
 void ADC(CPU* cpu, uint16_t operand){
+    cpu->instr_extra_cycle = true; // inform CPU this instruction takes +1 cycles under certain addr. modes
+
     uint8_t fetched = read8(cpu, operand);
 
     // Add value to accumulator, accounting for carry
@@ -201,12 +211,12 @@ void ADC(CPU* cpu, uint16_t operand){
     // Set acc to final result (convert back to 8bit)
     cpu->a = sum & 0x00ff;
 
-    // Handle additional clock cycle
-
 }
 
 // Subtract with carry
 void SBC(CPU* cpu, uint16_t operand){
+    cpu->instr_extra_cycle = true; // inform CPU this instruction takes +1 cycles under certain addr. modes
+    
     uint8_t temp = read8(cpu, operand);
 
     // Invert the value to allow subtraction
@@ -247,6 +257,8 @@ void SBC(CPU* cpu, uint16_t operand){
 }
 
 void CMP(CPU* cpu, uint16_t operand){
+    cpu->instr_extra_cycle = true; // inform CPU this instruction takes +1 cycles under certain addr. modes
+
     //printf("\n\n CMP P before: %.2x\n", cpu->p);
     uint8_t pulled = read8(cpu, operand);
 
@@ -534,6 +546,12 @@ void RTS(CPU* cpu){
 void BCC(CPU* cpu, uint16_t branch_addr){
     // branch if carry flag clear
     if(check_flag(cpu, FLAG_C) == false){
+        if( (cpu->pc & 0xFF00) != (branch_addr & 0xFF00) ){
+            cpu->instr_extra_cycle = true; // alert CPU to +1 cycle if page boundary crossed
+        }
+
+        cpu->cycles++; // +1 cycle if branch succeeds
+        
         cpu->pc = branch_addr;
     }
 }
@@ -541,13 +559,23 @@ void BCC(CPU* cpu, uint16_t branch_addr){
 void BCS(CPU* cpu, uint16_t branch_addr){
     // branch if carry flag set
     if(check_flag(cpu, FLAG_C)){
+        if( (cpu->pc & 0xFF00) != (branch_addr & 0xFF00) ){
+            cpu->instr_extra_cycle = true; // alert CPU to +1 cycle if page boundary crossed
+        }
+
+        cpu->cycles++; // +1 cycle if branch succeeds
         cpu->pc = branch_addr;
-    }
+    } 
 }
 
 void BEQ(CPU* cpu, uint16_t branch_addr){
     // branch if equal/zero flag set
     if(check_flag(cpu, FLAG_Z)){
+        if( (cpu->pc & 0xFF00) != (branch_addr & 0xFF00) ){
+            cpu->instr_extra_cycle = true; // alert CPU to +1 cycle if page boundary crossed
+        }
+
+        cpu->cycles++; // +1 cycle if branch succeeds
         cpu->pc = branch_addr;
     }
 }
@@ -555,6 +583,11 @@ void BEQ(CPU* cpu, uint16_t branch_addr){
 void BMI(CPU* cpu, uint16_t branch_addr){
     // branch if negative flag set
     if(check_flag(cpu, FLAG_N)){
+        if( (cpu->pc & 0xFF00) != (branch_addr & 0xFF00) ){
+            cpu->instr_extra_cycle = true; // alert CPU to +1 cycle if page boundary crossed
+        }
+
+        cpu->cycles++; // +1 cycle if branch succeeds
         cpu->pc = branch_addr;
     }
 }
@@ -562,6 +595,11 @@ void BMI(CPU* cpu, uint16_t branch_addr){
 void BNE(CPU* cpu, uint16_t branch_addr){
     // branch if not equal/zero flag clear
     if(!check_flag(cpu, FLAG_Z)){
+        if( (cpu->pc & 0xFF00) != (branch_addr & 0xFF00) ){
+            cpu->instr_extra_cycle = true; // alert CPU to +1 cycle if page boundary crossed
+        }
+
+        cpu->cycles++; // +1 cycle if branch succeeds
         cpu->pc = branch_addr;
     }
 }
@@ -569,6 +607,11 @@ void BNE(CPU* cpu, uint16_t branch_addr){
 void BPL(CPU* cpu, uint16_t branch_addr){
     // Branch if positive (i.e. if Negative flag not set)
     if(!check_flag(cpu, FLAG_N)){
+        if( (cpu->pc & 0xFF00) != (branch_addr & 0xFF00) ){
+            cpu->instr_extra_cycle = true; // alert CPU to +1 cycle if page boundary crossed
+        }
+
+        cpu->cycles++; // +1 cycle if branch succeeds
         cpu->pc = branch_addr;
     }
 }
@@ -576,6 +619,11 @@ void BPL(CPU* cpu, uint16_t branch_addr){
 void BVC(CPU* cpu, uint16_t branch_addr){
     // branch if overflow flag clear
     if(!check_flag(cpu, FLAG_V)){
+        if( (cpu->pc & 0xFF00) != (branch_addr & 0xFF00) ){
+            cpu->instr_extra_cycle = true; // alert CPU to +1 cycle if page boundary crossed
+        }
+
+        cpu->cycles++; // +1 cycle if branch succeeds
         cpu->pc = branch_addr;
     }
 }
@@ -583,6 +631,11 @@ void BVC(CPU* cpu, uint16_t branch_addr){
 void BVS(CPU* cpu, uint16_t branch_addr){
     // branch if overflow flag set
     if(check_flag(cpu, FLAG_V)){
+        if( (cpu->pc & 0xFF00) != (branch_addr & 0xFF00) ){
+            cpu->instr_extra_cycle = true; // alert CPU to +1 cycle if page boundary crossed
+        }
+
+        cpu->cycles++; // +1 cycle if branch succeeds
         cpu->pc = branch_addr;
     }
 }
