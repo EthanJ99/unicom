@@ -1,4 +1,17 @@
 - Memory mirroring
-- Accout for extra cycles (e.g. crossing page boundary)
 - Rework the ASL/LSR/ROL/ROR instructions to handle acc mode less dumbly
 - https://wiki.nesdev.org/w/index.php/Status_flags#The_B_flag in PHP, PLT, RTI
+- Add authorship info into each file
+
+-------------------------------------------
+
+Steps:
+
+1. Load ROM properly (e.g. load CHR ROM into appropriate memory location)
+2. PPU:
+    Emulating Registers and NMI Interruption
+    Parsing and drawing tiles from CHR ROM
+    Rendering PPU state:
+        Rendering background tiles
+        Rendering sprites
+    * Implementing the scroll

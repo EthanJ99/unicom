@@ -3,9 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-CPU* cpu_init(void){
-    CPU* cpu = malloc(sizeof(CPU));
-
+void cpu_init(CPU* cpu){
     memset(cpu->memory, 0, sizeof(cpu->memory));
     cpu->a = 0;
     cpu->x = 0;
@@ -15,8 +13,6 @@ CPU* cpu_init(void){
     cpu->p = 0x24;
 
     cpu->cycles = 7;
-
-    return cpu;
 }
 
 /* ---------------------------- Miscellaneous functions ---------------------------- */

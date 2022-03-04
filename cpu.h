@@ -55,8 +55,8 @@ typedef struct CPU{
     bool instr_extra_cycle;
 } CPU;
 
-// Return a CPU with some preset values for its registers and memory
-CPU* cpu_init(void);
+// Initialise default CPU values
+void cpu_init(CPU* cpu);
 
 // Swaps two bytes in a 16-bit integer
 uint16_t byte_swap(uint16_t val);
