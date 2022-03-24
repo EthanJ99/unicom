@@ -1,13 +1,14 @@
 #include "ops.h"
 #include "cpu.h"
+#include "system.h"
 #include <stdio.h>
 
 /* ---------------------------- Load ---------------------------- */
 void LDA(CPU* cpu, uint16_t operand){
     cpu->instr_extra_cycle = true; // inform CPU this instruction takes +1 cycles under certain addr. modes
 
-    cpu->a = read8(cpu, operand);
-    printf("[LDA] addr: %.4X a: %.2X", operand, cpu->a);
+    cpu->a = read(operand);
+    // printf("[LDA] addr: %.4X a: %.2X", operand, cpu->a);
 
     handle_flag_z(cpu, cpu->a);
     handle_flag_n(cpu, cpu->a);
@@ -16,8 +17,8 @@ void LDA(CPU* cpu, uint16_t operand){
 void LDX(CPU* cpu, uint16_t operand){
     cpu->instr_extra_cycle = true; // inform CPU this instruction takes +1 cycles under certain addr. modes
 
-    cpu->x = read8(cpu, operand);
-    printf("[LDX] addr: %.4X a: %.2X", operand, cpu->a);
+    cpu->x = read(operand);
+    // printf("[LDX] addr: %.4X a: %.2X", operand, cpu->a);
     handle_flag_z(cpu, cpu->x);
     handle_flag_n(cpu, cpu->x);
 }
@@ -25,29 +26,27 @@ void LDX(CPU* cpu, uint16_t operand){
 void LDY(CPU* cpu, uint16_t operand){
     cpu->instr_extra_cycle = true; // inform CPU this instruction takes +1 cycles under certain addr. modes
 
-    cpu->y = read8(cpu, operand);
-    printf("[LDY] addr: %.4X a: %.2X", operand, cpu->a);
+    cpu->y = read(operand);
+    // printf("[LDY] addr: %.4X a: %.2X", operand, cpu->a);
     handle_flag_z(cpu, cpu->y);
     handle_flag_n(cpu, cpu->y);
 }
 
 /* ---------------------------- Store ---------------------------- */
 void STA(CPU* cpu, uint16_t operand){
-    //printf("\n\nSTA P before: %.2x\n", cpu->p);
+    // printf("[STA] addr: %.4X val at addr: %.2X a: %.2X", operand, read(operand), cpu->a);
+    write(operand, cpu->a);
     
-    cpu->memory[operand] = cpu->a;
-    printf("[STA] addr: %.4X val at addr: %.2X a: %.2X", operand, cpu->memory[operand], cpu->a);
-    //printf("STA P after: %.2x\n\n", cpu->p);
 }
 
 void STX(CPU* cpu, uint16_t operand){
-    printf("[STA] addr: %.4X a: %.2X", operand, cpu->a);
-    cpu->memory[operand] = cpu->x;
+    // printf("[STX] addr: %.4X a: %.2X", operand, cpu->a);
+    write(operand, cpu->x);
 }
 
 void STY(CPU* cpu, uint16_t operand){
-    printf("[STA] addr: %.4X a: %.2X", operand, cpu->a);
-    cpu->memory[operand] = cpu->y;
+    // printf("[STY] addr: %.4X a: %.2X", operand, cpu->a);
+    write(operand, cpu->y);
 }
 
 /* ---------------------------- Register transfers ---------------------------- */
@@ -105,13 +104,13 @@ void PHP(CPU* cpu){
 }
 
 void PLA(CPU* cpu){
-    //printf("\n\n PLA P before: %.2x\n", cpu->p);
+    //// printf("\n\n PLA P before: %.2x\n", cpu->p);
     cpu->a = stack_pull(cpu);
 
     // handle Z/N flags
     handle_flag_z(cpu, cpu->a);
     handle_flag_n(cpu, cpu->a);
-    //printf(" PLA P after: %.2x\n", cpu->p);
+    //// printf(" PLA P after: %.2x\n", cpu->p);
 }
 
 void PLP(CPU* cpu){
@@ -122,18 +121,18 @@ void PLP(CPU* cpu){
 void AND(CPU* cpu, uint16_t operand){
     cpu->instr_extra_cycle = true; // inform CPU this instruction takes +1 cycles under certain addr. modes
 
-    //printf("\n\n AND P before: %.2x\n", cpu->p);
-    cpu->a &= read8(cpu, operand);
+    //// printf("\n\n AND P before: %.2x\n", cpu->p);
+    cpu->a &= read(operand);
 
     // handle Z/N flags
     handle_flag_z(cpu, cpu->a);
     handle_flag_n(cpu, cpu->a);
-    //printf(" AND P after: %.2x\n", cpu->p);
+    //// printf(" AND P after: %.2x\n", cpu->p);
 }
 
 void EOR(CPU* cpu, uint16_t operand){
     cpu->instr_extra_cycle = true; // inform CPU this instruction takes +1 cycles under certain addr. modes
-    cpu->a ^= read8(cpu, operand);
+    cpu->a ^= read(operand);
 
     // handle Z/N flags
     handle_flag_z(cpu, cpu->a);
@@ -143,7 +142,7 @@ void EOR(CPU* cpu, uint16_t operand){
 void ORA(CPU* cpu, uint16_t operand){
     cpu->instr_extra_cycle = true; // inform CPU this instruction takes +1 cycles under certain addr. modes
 
-    cpu->a |= read8(cpu, operand);
+    cpu->a |= read(operand);
 
     // handle Z/N flags
     handle_flag_z(cpu, cpu->a);
@@ -151,7 +150,7 @@ void ORA(CPU* cpu, uint16_t operand){
 }
 
 void BIT(CPU* cpu, uint16_t operand){
-    uint8_t pulled = read8(cpu, operand);
+    uint8_t pulled = read(operand);
 
     handle_flag_z(cpu, cpu->a & pulled);
 
@@ -175,7 +174,7 @@ void BIT(CPU* cpu, uint16_t operand){
 void ADC(CPU* cpu, uint16_t operand){
     cpu->instr_extra_cycle = true; // inform CPU this instruction takes +1 cycles under certain addr. modes
 
-    uint8_t fetched = read8(cpu, operand);
+    uint8_t fetched = read(operand);
 
     // Add value to accumulator, accounting for carry
     uint16_t sum = (uint16_t)cpu->a + (uint16_t)fetched + (uint16_t)check_flag(cpu, FLAG_C);
@@ -217,7 +216,7 @@ void ADC(CPU* cpu, uint16_t operand){
 void SBC(CPU* cpu, uint16_t operand){
     cpu->instr_extra_cycle = true; // inform CPU this instruction takes +1 cycles under certain addr. modes
     
-    uint8_t temp = read8(cpu, operand);
+    uint8_t temp = read(operand);
 
     // Invert the value to allow subtraction
     uint16_t fetched = ((uint16_t)temp ^ 0x00FF);
@@ -259,8 +258,8 @@ void SBC(CPU* cpu, uint16_t operand){
 void CMP(CPU* cpu, uint16_t operand){
     cpu->instr_extra_cycle = true; // inform CPU this instruction takes +1 cycles under certain addr. modes
 
-    //printf("\n\n CMP P before: %.2x\n", cpu->p);
-    uint8_t pulled = read8(cpu, operand);
+    //// printf("\n\n CMP P before: %.2x\n", cpu->p);
+    uint8_t pulled = read(operand);
 
     uint16_t val = (uint16_t)cpu->a - (uint16_t)pulled;
 
@@ -276,12 +275,12 @@ void CMP(CPU* cpu, uint16_t operand){
 
     // Set N flag if bit 7 of val is set (i.e. val is signed)
     handle_flag_n(cpu, val);
-    //printf(" CMP P after: %.2x\n", cpu->p);
+    //// printf(" CMP P after: %.2x\n", cpu->p);
 
 }
 
 void CPX(CPU* cpu, uint16_t operand){
-    uint8_t pulled = read8(cpu, operand);
+    uint8_t pulled = read(operand);
     uint8_t val = cpu->x - pulled;
 
     // Set carry flag if X greater than read value
@@ -300,7 +299,7 @@ void CPX(CPU* cpu, uint16_t operand){
 }
 
 void CPY(CPU* cpu, uint16_t operand){
-    uint8_t pulled = read8(cpu, operand);
+    uint8_t pulled = read(operand);
     uint8_t val = cpu->y - pulled;
 
     // Set carry flag if Y greater than read value
@@ -320,10 +319,10 @@ void CPY(CPU* cpu, uint16_t operand){
 
 /* ------------------------------ Increments & Decrements ------------------------------ */
 void INC(CPU* cpu, uint16_t operand){
-    cpu->memory[operand]++;
+    write(operand, read(operand) + 1);
 
-    handle_flag_z(cpu, cpu->memory[operand]);
-    handle_flag_n(cpu, cpu->memory[operand]);
+    handle_flag_z(cpu, read(operand));
+    handle_flag_n(cpu, read(operand));
 }
 
 void INX(CPU* cpu){
@@ -341,10 +340,10 @@ void INY(CPU* cpu){
 }
 
 void DEC(CPU* cpu, uint16_t operand){
-    cpu->memory[operand]--;
+    write(operand, read(operand) - 1);
 
-    handle_flag_z(cpu, cpu->memory[operand]);
-    handle_flag_n(cpu, cpu->memory[operand]);
+    handle_flag_z(cpu, read(operand));
+    handle_flag_n(cpu, read(operand));
 }
 
 void DEX(CPU* cpu){
@@ -375,11 +374,12 @@ void ASL(CPU* cpu, uint16_t operand, Mode addr_mode){
             clear_flag(cpu, FLAG_C);
         }
     } else{
-        uint8_t carry = cpu->memory[operand] & 0x80;
-        cpu->memory[operand] = cpu->memory[operand] << 1;
-        handle_flag_n(cpu, cpu->memory[operand]);
-        handle_flag_z(cpu, cpu->memory[operand]);
-        
+        uint8_t data = read(operand);
+        uint8_t carry = data & 0x80;
+        write(operand, (data << 1));
+
+        handle_flag_n(cpu, read(operand));
+        handle_flag_z(cpu, read(operand));
         if(carry){
             set_flag(cpu, FLAG_C);
         } else{
@@ -404,11 +404,12 @@ void LSR(CPU* cpu, uint16_t operand, Mode addr_mode){
             clear_flag(cpu, FLAG_C);
         }
     } else{
-        uint8_t carry = cpu->memory[operand] & 0x01;
-        cpu->memory[operand] = cpu->memory[operand] >> 1;
+        uint8_t data = read(operand);
+        uint8_t carry = data & 0x01;
+        write(operand, (data >> 1));
 
-        handle_flag_n(cpu, cpu->memory[operand]);
-        handle_flag_z(cpu, cpu->memory[operand]);
+        handle_flag_n(cpu, read(operand));
+        handle_flag_z(cpu, read(operand));
 
         if(carry){
             set_flag(cpu, FLAG_C);
@@ -433,12 +434,12 @@ void ROL(CPU* cpu, uint16_t operand, Mode addr_mode){
 
         handle_flag_n(cpu, cpu->a);
     } else{
-        uint16_t data = cpu->memory[operand];
+        uint16_t data = read(operand);
         uint8_t carry = data & 0x80; 
 
         // carry <-- accumulator <-- new carry
         data = ((uint8_t)check_flag(cpu, FLAG_C)) | (data << 1);
-        cpu->memory[operand] = (uint8_t)data;
+        write(operand, (uint8_t)data);
 
         if(carry){
             set_flag(cpu, FLAG_C);
@@ -455,7 +456,7 @@ void ROR(CPU* cpu, uint16_t operand, Mode addr_mode){
         uint8_t carry = cpu->a & 0x01; 
 
         // carry --> accumulator --> new carry
-        cpu->a = ((uint8_t)check_flag(cpu, FLAG_C) << 7) | (cpu->a >> 1) & 0x00FF;
+        cpu->a = ((uint8_t)check_flag(cpu, FLAG_C) << 7) | ( (cpu->a >> 1) & 0x00FF );
 
         if(carry){
             set_flag(cpu, FLAG_C);
@@ -466,12 +467,12 @@ void ROR(CPU* cpu, uint16_t operand, Mode addr_mode){
         handle_flag_z(cpu, cpu->a);
         handle_flag_n(cpu, cpu->a);
     } else{
-        uint16_t data = cpu->memory[operand];
+        uint16_t data = read(operand);
         uint8_t carry = data & 0x01; 
 
         // carry --> data --> new carry
         data = (check_flag(cpu, FLAG_C) << 7) | (data >> 1);
-        cpu->memory[operand] = (uint8_t)data & 0x00FF;
+        write(operand, ( (uint8_t)data & 0x00FF ) );
 
         if(carry){
             set_flag(cpu, FLAG_C);
@@ -510,7 +511,7 @@ void RTI(CPU* cpu){
 // Jump to a given memory address
 void JMP(CPU* cpu, uint16_t operand){
     cpu->pc = operand;
-    printf("[JMP] addr: %.4X val: %.2X PC: %.2X", operand, cpu->memory[operand], cpu->pc);
+    // printf("[JMP] addr: %.4X val: %.2X PC: %.2X", operand, read(operand), cpu->pc);
     
 }
 

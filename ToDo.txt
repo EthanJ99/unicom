@@ -15,3 +15,46 @@ Steps:
         Rendering background tiles
         Rendering sprites
     * Implementing the scroll
+	
+-------------------------------------------
+
+First and foremost, get the PPU memory mapped to the CPU, and make a basic Interrupt interface too. Get the CPU writing to PPU memory, so that you'll have something to try to render :)
+
+Then, try to render the Pattern Tables. After that, use what you've learned to render the Nametables. Hopefully, if you've done things right, you should see semblances of some games start to appear. You can look into simple sprite rendering, and see if you're able to output what's in OAM.
+
+After all that's done, then look into the actual cycle-by-cycle loop of the PPU, since hopefully, at that point, you'll have a much better understanding of how the PPU operates :D
+
+-------------------------------------------
+
+If this is your first go at something like this, I'd probably recommend doing per-scanline rendering unless you really, really want this thing to be absolutely perfect. Just be prepared for big headaches.
+
+Run a scanline's worth of CPU cycles, render a scanline, run another scanline of CPU cycles, render the next scanline and so on. Handle vsync when you get to that scanline, etc.
+
+-------------------------------------------
+
+I'm still working on my PPU and am not an expert, but this is the broad strokes of what I did to start getting Donkey Kong's title screen and demo screens working:
+
+    Made it so every CPU instruction execution returns the number of cycles it took, then run a 'ppu tick' three times that cycle count.
+    The only thing my 'ppu tick' does right now is increment scanline and cycle counts so that it can fire an NMI at the right time (and set/unset the vblank flag).
+    Intercepted writes to memory addresses 0x2006 and 0x2007 and set PPU data/memory instead, so the game can write the nametable.
+    Rendered to my video buffer once in a while, based on what's in the nametable.
+
+I think the most important thing to take away is: you can get a lot done without having the ppu stuff all timed out properly. It's possible to work on small bits at a time.
+
+In fact, you can even start getting your rendering code going without worrying about interrupts or memory writes. Before I did the stuff above, I made sure I could just render all the tiles in the pattern table to the screen. It's fun seeing the digit tiles showing up, for example.
+
+-------------------------------------------
+
+Basically, the process I've found that has gotten me...progress has been:
+
+    Load Donkey Kong :)
+    Make sure you have NMI implemented on CPU (pretty straightforward)
+    Implement PPUSTATUS vblank flag (simple) and PPUCTRL NMI flag + background address flag (simple)
+    Implement PPUADDR/PPUDATA so that the nametables are filled out
+    Now you have some data your PPU can actually read for rendering background. Render it scanline by scanline - just follow the wiki on this. Maybe the timing will be bad, it doesn't matter for this game. Start off with rendering tiles based on the pattern table ID, don't try and fetch patterns.
+    Fix the inevitable bugs with your PPUDATA implementation until you see a blocky version of the Donkey Kong screen.
+    Now fetch pattern table data using the nametable data. If it looks "wrong" make sure you are consuming the background address flag. Start off with black and white, then pick two colors to mix for the two bits. Now you should have something like https://i.imgur.com/7OIpHgd.png
+    (Optional) implement palette reads (I'm skipping this for now).
+    Implement OAMDMA (and OAMDATA I guess, I implemented one on top of the other)
+    Now you should have sprite data to render. Implement the logic for copying from primary OAM to scanline OAM. I'm doing it all as one step (not smearing it over up to 256 cycles like the actual hardware). Skip the confusing sprite overflow junk.
+    This is where I'm stuck. I think I need to read the "sprites" section of https://wiki.nesdev.com/w/index.php/PPU_rendering very carefully.

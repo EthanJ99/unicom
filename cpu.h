@@ -49,6 +49,8 @@ typedef struct CPU{
     // Number of cycles taken
     int cycles;
 
+    bool nmi;
+
     // helped values used to determine if the combination of addressing mode and instruction
     // will lead to an extra clock cycle being used up
     bool addr_extra_cycle;
@@ -57,13 +59,16 @@ typedef struct CPU{
 
 // Initialise default CPU values
 void cpu_init(CPU* cpu);
+int cpu_step(CPU* cpu);
 
 // Swaps two bytes in a 16-bit integer
 uint16_t byte_swap(uint16_t val);
 
-// Read a byte from CPUs memory from the given address
-uint8_t read8(CPU* cpu, uint16_t addr);
+// Read 2 bytes (and swap them so they display properly)
 uint16_t read16(CPU* cpu, uint16_t addr);
+
+// Write data to address
+void write8(CPU* cpu, uint16_t addr, uint8_t data);
 
 Op* get_op_data(uint8_t opcode);
 

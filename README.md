@@ -19,6 +19,7 @@ Main development started 2021.
 * https://www.awsm.de/blog/pydisass/
 * https://www.youtube.com/playlist?list=PLrOv9FMX8xJHqMvSGB_9G9nZZ_4IgteYf
 * https://github.com/ares-emulator/ares/tree/master/ares/component/processor/mos6502
+* https://github.com/fogleman/nes
 
 ### Specific Bugs/Details
 #### JMP Indirect Addressing
