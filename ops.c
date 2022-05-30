@@ -346,6 +346,7 @@ void DEC(CPU* cpu, uint16_t operand){
     handle_flag_n(cpu, read(operand));
 }
 
+// Decrement X Register
 void DEX(CPU* cpu){
     cpu->x--;
 
@@ -511,14 +512,11 @@ void RTI(CPU* cpu){
 // Jump to a given memory address
 void JMP(CPU* cpu, uint16_t operand){
     cpu->pc = operand;
-    // printf("[JMP] addr: %.4X val: %.2X PC: %.2X", operand, read(operand), cpu->pc);
-    
 }
 
+// JSR - Jump to subroutine but save return address on stack
 void JSR(CPU* cpu, uint16_t operand){
-    // JSR - Jump to subroutine but save return address on stack
-
-    // First decrement PC
+    // First, decrement PC
     cpu->pc--;
 
     // Push current PC to stack, high byte first

@@ -76,6 +76,7 @@ int main(int argc, char *argv[]){
 
     Uint32 delta;
 
+
     // Main execution loop
     while(running){
         start_time = SDL_GetTicks();
@@ -108,6 +109,8 @@ int main(int argc, char *argv[]){
         
         
     }
+
+    // print_disassembly(&cpu, false);
 
     // Print nestest results
     // printf("NESTEST Results [0x02]: %.2X [0x03]: %.2X", cpu.memory[0x02], cpu.memory[0x03]);

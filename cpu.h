@@ -51,7 +51,7 @@ typedef struct CPU{
 
     bool nmi;
 
-    // helped values used to determine if the combination of addressing mode and instruction
+    // helper values used to determine if the combination of addressing mode and instruction
     // will lead to an extra clock cycle being used up
     bool addr_extra_cycle;
     bool instr_extra_cycle;

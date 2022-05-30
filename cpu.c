@@ -699,23 +699,25 @@ void disassemble_op(CPU* cpu, Op* op){
         case MODE_ABS: printf("%.2X %.2X",  read(cpu->pc + 1), read(cpu->pc + 2));  break;
         case MODE_ABX: printf("%.2X %.2X",  read(cpu->pc + 1), read(cpu->pc + 2));  break;
         case MODE_ABY: printf("%.2X %.2X",  read(cpu->pc + 1), read(cpu->pc + 2));  break;
-        case MODE_IMM: printf("%.2X   ",    read(cpu->pc + 1));                           break;
+        case MODE_IMM: printf("%.2X   ",    read(cpu->pc + 1));                     break;
         case MODE_ACC:
-        case MODE_IMP: printf("        ");                                                      break;
-        case MODE_INX: printf("%.2X   ",    read(cpu->pc + 1));                           break;
+        case MODE_IMP: printf("        ");                                          break;
+        case MODE_INX: printf("%.2X   ",    read(cpu->pc + 1));                     break;
         case MODE_IND: printf("%.2X %.2X",  read(cpu->pc + 1), read(cpu->pc + 2));  break;
-        case MODE_INY: printf("%.2X   ",    read(cpu->pc + 1));                           break;
-        case MODE_REL: printf("%.2X   ",    read(cpu->pc + 1));                           break;
-        case MODE_ZPG: printf("%.2X   ",    read(cpu->pc + 1));                           break;
-        case MODE_ZPX: printf("%.2X   ",    read(cpu->pc + 1));                           break;
-        case MODE_ZPY: printf("%.2X   ",    read(cpu->pc + 1));                           break;
+        case MODE_INY: printf("%.2X   ",    read(cpu->pc + 1));                     break;
+        case MODE_REL: printf("%.2X   ",    read(cpu->pc + 1));                     break;
+        case MODE_ZPG: printf("%.2X   ",    read(cpu->pc + 1));                     break;
+        case MODE_ZPX: printf("%.2X   ",    read(cpu->pc + 1));                     break;
+        case MODE_ZPY: printf("%.2X   ",    read(cpu->pc + 1));                     break;
         default: // this should literally never be reached
             printf("\nError: opcode $%.X reading invalid addressing mode.\n", op->code);
             break;
     }
     printf("\t");
     
+    // Print Label
     printf("%s ", op->label);
+
     // Print assembly
     switch (op->mode){
         case MODE_ABS: printf("$%.4X    ",     read16(cpu, cpu->pc + 1)); break;
