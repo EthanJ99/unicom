@@ -1,7 +1,6 @@
 ﻿# unicom
 
-A Nintendo Entertainment System/Famicom emulator created my final year Honours Project (COMP390) at the University of Liverpool.
-Main development started 2021.
+A MOS 6502 disassembler/emulator (and in-development Nintendo Entertainment System/Famicom emulator) created for my final year Honours Project (COMP390) at the University of Liverpool. Main development started 2021.
 
 ![A screenshot of the unicom emulator, displaying several lines of disassembled code.](https://i.imgur.com/fWkYqYF.png)
 
