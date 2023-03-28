@@ -52,8 +52,8 @@ int main(int argc, char *argv[]){
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
 
-    draw_pattern_table(window, renderer, 0);
-    draw_pattern_table(window, renderer, 0x1000);
+    //draw_pattern_table(window, renderer, 0);
+    //draw_pattern_table(window, renderer, 0x1000);
 
     // // DEBUG Set PC to NESTEST start point
     // // cpu.pc = 0xc000;

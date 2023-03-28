@@ -1,9 +1,11 @@
+- Redo the 'system' shit - remove global variable, pass a System struct to each func that needs it (incl. mem read/writes)
+- Rewrite entire PPU - current version is silly and rushed
+- Rewrite CPU to not use that ridiculous function. Reduce redundancy between main loop and get_op_data() (which probably shouldn't exist)
 - Memory mirroring
 - Rework the ASL/LSR/ROL/ROR instructions to handle acc mode less dumbly
 - https://wiki.nesdev.org/w/index.php/Status_flags#The_B_flag in PHP, PLT, RTI
 - Add authorship info into each file
 - Rewrite print_disassembly() to use new disassemble() function.
-- Rewrite CPU to not use that ridiculous function. Reduce redundancy between main loop and get_op_data() (which probably shouldn't exist)
 -------------------------------------------
 
 Steps:

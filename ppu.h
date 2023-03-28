@@ -85,8 +85,6 @@ void ppu_write_PPUDATA(uint8_t data);
 void ppu_write_PPUADDR(uint8_t data);
 void ppu_write_OAMDMA(uint8_t data);
 
-
-
 uint8_t ppu_get_vram_addr_increment();
 uint8_t ppu_get_base_nametable_addr();
 uint8_t ppu_get_nmi();

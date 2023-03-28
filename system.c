@@ -22,7 +22,6 @@ uint8_t read(uint16_t addr){
     } else if(addr >= 0x2000 && addr <= 0x3FFF){
         // PPU registers
         // Values are read/written up to 0x2007, then mirrored through to 0x3FFF (every 8 bytes)
-
         data = ppu_read_register(addr);
 
     } else if(addr >= 0x4020 && addr <= 0xFFFF){
@@ -70,5 +69,5 @@ uint8_t ppu_read(uint16_t addr){
 }
 
 void ppu_write(uint16_t addr, uint8_t data){
-    
+    nes.ppu->memory[addr] = data;
 }
